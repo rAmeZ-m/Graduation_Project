@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriAdvisor — Intelligent Crop Advisory</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --soil:   #3b2a1a;
+  --earth:  #5c3d1e;
+  --wheat:  #c8923a;
+  --leaf:   #4a7c3f;
+  --sprout: #7ab648;
+  --sky:    #d4e8c2;
+  --cream:  #f5f0e8;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Inter', sans-serif;
+  background: #1a2e0e;
+  color: var(--cream);
+  overflow-x: hidden;
+}
+
+/* ── ANIMATED BACKGROUND ─────── */
+.bg {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 10% 20%, rgba(74,124,63,0.35) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 10%, rgba(200,146,58,0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 50% 100%, rgba(91,61,30,0.60) 0%, transparent 65%),
+    linear-gradient(160deg, #0f1f08 0%, #1a2e0e 40%, #112208 100%);
+  animation: bgShift 12s ease-in-out infinite alternate;
+}
+@keyframes bgShift {
+  0%   { filter: hue-rotate(0deg)   brightness(1);    }
+  50%  { filter: hue-rotate(8deg)   brightness(1.05); }
+  100% { filter: hue-rotate(-5deg)  brightness(0.97); }
+}
+
+/* ── SUN GLOW ────────────────── */
+.sun {
+  position: fixed; top: -120px; right: -120px;
+  width: 400px; height: 400px; border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(200,146,58,0.25) 0%,
+    rgba(200,146,58,0.08) 40%,
+    transparent 70%);
+  animation: sunPulse 6s ease-in-out infinite alternate;
+  z-index: 0;
+}
+@keyframes sunPulse {
+  0%   { transform: scale(1);    opacity: .7; }
+  100% { transform: scale(1.15); opacity: 1;  }
+}
+
+/* ── FLOATING LEAVES ─────────── */
+.leaves { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+.leaf {
+  position: absolute; border-radius: 50% 0 50% 0;
+  opacity: 0; animation: floatLeaf linear infinite;
+}
+.leaf:nth-child(1)  { left:5%;  width:7px;  height:7px;  background:rgba(122,182,72,.35); animation-duration:18s; animation-delay:0s;  }
+.leaf:nth-child(2)  { left:15%; width:5px;  height:5px;  background:rgba(74,124,63,.30);  animation-duration:22s; animation-delay:3s;  }
+.leaf:nth-child(3)  { left:28%; width:9px;  height:9px;  background:rgba(122,182,72,.25); animation-duration:16s; animation-delay:6s;  }
+.leaf:nth-child(4)  { left:42%; width:6px;  height:6px;  background:rgba(200,146,58,.20); animation-duration:20s; animation-delay:1s;  }
+.leaf:nth-child(5)  { left:58%; width:8px;  height:8px;  background:rgba(122,182,72,.30); animation-duration:25s; animation-delay:4s;  }
+.leaf:nth-child(6)  { left:70%; width:5px;  height:5px;  background:rgba(74,124,63,.25);  animation-duration:19s; animation-delay:8s;  }
+.leaf:nth-child(7)  { left:82%; width:7px;  height:7px;  background:rgba(122,182,72,.20); animation-duration:23s; animation-delay:2s;  }
+.leaf:nth-child(8)  { left:91%; width:6px;  height:6px;  background:rgba(200,146,58,.15); animation-duration:17s; animation-delay:11s; }
+.leaf:nth-child(9)  { left:35%; width:10px; height:10px; background:rgba(122,182,72,.28); animation-duration:21s; animation-delay:14s; }
+.leaf:nth-child(10) { left:65%; width:5px;  height:5px;  background:rgba(74,124,63,.22);  animation-duration:24s; animation-delay:7s;  }
+
+@keyframes floatLeaf {
+  0%   { transform: translateY(110vh) rotate(0deg)   translateX(0px);   opacity: 0;  }
+  5%   { opacity: .8; }
+  50%  { transform: translateY(50vh)  rotate(180deg) translateX(30px);  opacity: .5; }
+  95%  { opacity: .3; }
+  100% { transform: translateY(-10vh) rotate(360deg) translateX(-20px); opacity: 0;  }
+}
+
+/* ── SOIL STRIP ──────────────── */
+.soil-strip {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 5px; z-index: 5;
+  background: linear-gradient(90deg, var(--soil), var(--earth), var(--wheat), var(--earth), var(--soil));
+  background-size: 200% 100%;
+  animation: soilFlow 8s linear infinite;
+}
+@keyframes soilFlow {
+  0%   { background-position: 0%   50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* ── GRID OVERLAY ────────────── */
+.grid-overlay {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(122,182,72,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122,182,72,.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ── TOPBAR ──────────────────── */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 1rem 2.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(122,182,72,.15);
+  background: rgba(15,31,8,.75);
+  backdrop-filter: blur(16px);
+}
+.topbar-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem; font-weight: 900;
+  letter-spacing: 1px; color: var(--sprout);
+}
+.topbar-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  color: rgba(212,232,194,.5); text-transform: uppercase;
+}
+.status-dot {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; color: var(--sprout); letter-spacing: 1px;
+}
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--sprout); box-shadow: 0 0 8px var(--sprout);
+  animation: dotPulse 2.5s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%,100% { opacity:1; box-shadow: 0 0 8px var(--sprout); }
+  50%      { opacity:.3; box-shadow: none; }
+}
+
+/* ── LAYOUT ──────────────────── */
+main {
+  position: relative; z-index: 10;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 6rem 2rem 4rem;
+  gap: 2rem;
+}
+
+/* ── BADGE ───────────────────── */
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1px solid rgba(122,182,72,.3); border-radius: 20px;
+  padding: 6px 16px;
+  background: rgba(122,182,72,.08);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 3px;
+  color: var(--sprout); text-transform: uppercase;
+  opacity: 0; animation: riseIn .7s .1s ease forwards;
+}
+
+/* ── HERO TITLE ──────────────── */
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(3.5rem, 5vw, 4.5rem);
+  font-weight: 900; line-height: 0.9;
+  text-align: center; letter-spacing: -1px;
+  color: var(--cream);
+  opacity: 0; animation: riseIn .9s .25s ease forwards;
+}
+.hero-title .green { color: var(--sprout); }
+.hero-title .wheat { color: var(--wheat); font-style: italic; }
+
+/* ── DIVIDER ─────────────────── */
+.divider {
+  width: 80px; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--sprout), transparent);
+  transform: scaleX(0);
+  animation: expandLine 1s .5s ease forwards;
+}
+@keyframes expandLine { to { transform: scaleX(1); } }
+
+/* ── SUBTITLE ────────────────── */
+.subtitle {
+  font-size: clamp(.9rem, 1.8vw, 1.1rem);
+  font-weight: 300; line-height: 1.8;
+  color: rgba(212,232,194,.7);
+  text-align: center; max-width: 520px;
+  opacity: 0; animation: riseIn .9s .4s ease forwards;
+}
+.subtitle strong { color: var(--cream); font-weight: 500; }
+
+/* ── MODELS LABEL ────────────── */
+.models-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 4px;
+  color: rgba(212,232,194,.35); text-transform: uppercase;
+  opacity: 0; animation: riseIn .7s .55s ease forwards;
+}
+
+/* ── GRID ────────────────────── */
+.models-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 14px; width: 100%; max-width: 660px;
+  opacity: 0; animation: riseIn .9s .65s ease forwards;
+}
+
+/* ── MODEL BUTTON ────────────── */
+.model-btn {
+  display: block; text-decoration: none;
+  position: relative; overflow: hidden;
+  padding: 1.4rem 1.5rem; border-radius: 14px;
+  border: 1px solid rgba(122,182,72,.18);
+  background: rgba(15,31,8,.6);
+  backdrop-filter: blur(10px);
+  transition: border-color .3s, transform .3s, box-shadow .3s;
+}
+
+/* left accent line */
+.model-btn::before {
+  content: ''; position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 3px; border-radius: 0 2px 2px 0;
+  background: var(--sprout);
+  transform: scaleY(0); transform-origin: center;
+  transition: transform .3s ease;
+}
+
+/* hover shine */
+.model-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(122,182,72,.07), transparent 60%);
+  opacity: 0; transition: opacity .3s;
+}
+
+.model-btn:hover {
+  border-color: rgba(122,182,72,.5);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0,0,0,.4), 0 0 0 1px rgba(122,182,72,.1);
+}
+.model-btn:hover::before { transform: scaleY(1); }
+.model-btn:hover::after  { opacity: 1; }
+
+.btn-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  color: var(--wheat); margin-bottom: .45rem; text-transform: uppercase;
+}
+.btn-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem; font-weight: 700;
+  color: var(--cream); line-height: 1.1; margin-bottom: .4rem;
+}
+.btn-desc {
+  font-size: 12px; font-weight: 300;
+  color: rgba(212,232,194,.55); line-height: 1.55;
+}
+.btn-arrow {
+  position: absolute; top: 1.2rem; right: 1.2rem;
+  font-size: 14px; color: rgba(122,182,72,.4);
+  transition: color .3s, transform .3s;
+}
+.model-btn:hover .btn-arrow { color: var(--sprout); transform: translate(3px,-3px); }
+
+/* individual accents per button */
+.model-btn:nth-child(2)::before { background: var(--wheat); }
+.model-btn:nth-child(3)::before { background: #5bbfb5; }
+.model-btn:nth-child(4)::before { background: #d47b7b; }
+.model-btn:nth-child(2) .btn-num { color: var(--wheat); }
+.model-btn:nth-child(3) .btn-num { color: #5bbfb5; }
+.model-btn:nth-child(4) .btn-num { color: #d47b7b; }
+
+/* ── FOOTER NOTE ─────────────── */
+.footer-note {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 2px;
+  color: rgba(212,232,194,.2); text-align: center;
+  opacity: 0; animation: riseIn .7s .9s ease forwards;
+}
+
+/* ── ENTRY ANIMATION ─────────── */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── RESPONSIVE ──────────────── */
+@media (max-width: 580px) {
+  .models-grid { grid-template-columns: 1fr; }
+  .topbar-tag  { display: none; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="bg"></div>
+<div class="sun"></div>
+<div class="grid-overlay"></div>
+<div class="leaves">
+  <div class="leaf"></div><div class="leaf"></div><div class="leaf"></div>
+  <div class="leaf"></div><div class="leaf"></div><div class="leaf"></div>
+  <div class="leaf"></div><div class="leaf"></div><div class="leaf"></div>
+  <div class="leaf"></div>
+</div>
+<div class="soil-strip"></div>
+
+<div class="topbar">
+  <div class="topbar-logo">AgriAdvisor</div>
+  <div class="topbar-tag">Crop Life</div>
+  <div class="status-dot"><div class="dot"></div> Active</div>
+</div>
+
+<main>
+
+  <div class="badge">🌱 &nbsp;· Crop Intelligence</div>
+
+  <h1 class="hero-title">
+    Agri<span class="green">Advisor</span><br>
+    <span class="wheat">Advisory</span> System
+  </h1>
+
+  <div class="divider"></div>
+
+  <p class="subtitle">
+    An intelligent system that analyzes <strong>soil properties</strong>
+    and <strong>climate conditions</strong> to recommend the most
+    suitable crops — improving productivity and sustainability.
+  </p>
+
+  <div class="models-label">— Choose a Model —</div>
+
+  <div class="models-grid">
+
+    <a href="../Page Two/page2.html" class="model-btn">
+      <div class="btn-num">01 · Model</div>
+      <div class="btn-name">Crop Predictor</div>
+      <div class="btn-desc">Recommends the optimal crop based on soil NPK values, temperature, humidity and rainfall.</div>
+      <div class="btn-arrow">↗</div>
+    </a>
+
+    <a href="../Page Three/AgriAdvisor-page3-yield.html" class="model-btn">
+      <div class="btn-num">02 · Model</div>
+      <div class="btn-name">Yield Estimator</div>
+      <div class="btn-desc">Estimates expected harvest yield per hectare using regression analysis on field data.</div>
+      <div class="btn-arrow">↗</div>
+    </a>
+
+    <a href="../Page Four/AgriAdvisor-page4-profit.html" class="model-btn">
+      <div class="btn-num">03 · Model</div>
+      <div class="btn-name">Profit Predictor</div>
+      <div class="btn-desc">Classifies soil type and recommends the ideal fertilizer strategy for maximum output.</div>
+      <div class="btn-arrow">↗</div>
+    </a>
+
+    <a href="../Page Five/AgriAdvisor-page5-guide.html" class="model-btn">
+      <div class="btn-num">04 · Model</div>
+      <div class="btn-name">Crops Guide</div>
+      <div class="btn-desc">Identifies potential crop disease risk from environmental and soil condition factors.</div>
+      <div class="btn-arrow">↗</div>
+    </a>
+
+  </div>
+
+  <div class="footer-note">
+    AgriAdvisor &nbsp;·&nbsp; Graduation Project &nbsp;·&nbsp; Built by Ramez Malak
+  </div>
+
+</main>
+
+</body>
+</html>

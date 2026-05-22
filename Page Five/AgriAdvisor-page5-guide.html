@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriAdvisor — Crop Guide</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080d08;--surface:rgba(14,22,14,0.78);
+  --green:#3b6d11;--sprout:#7ab648;--lime:#a8e063;
+  --wheat:#c8923a;--cream:#f0ebe0;--muted:rgba(240,235,224,0.52);
+  --border:rgba(240,235,224,0.09);--gborder:rgba(122,182,72,0.2);
+}
+html,body{min-height:100vh;font-family:'Inter',sans-serif;background:var(--bg);color:var(--cream);overflow-x:hidden}
+
+/* ── BG ── */
+.bg{position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 55% 50% at 10% 20%,rgba(59,109,17,.22) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 45% at 90% 80%,rgba(200,146,58,.10) 0%,transparent 60%),
+    linear-gradient(160deg,#050a05 0%,#080d08 55%,#090d06 100%)}
+.grid-ol{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(122,182,72,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(122,182,72,.02) 1px,transparent 1px);
+  background-size:65px 65px}
+.soil-strip{position:fixed;bottom:0;left:0;right:0;height:3px;z-index:50;
+  background:linear-gradient(90deg,#1a0e05,#5c3d1e,#c8923a,#5c3d1e,#1a0e05);
+  background-size:200%;animation:soilFlow 10s linear infinite}
+@keyframes soilFlow{to{background-position:200% 0}}
+
+/* ── TOPBAR ── */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:.85rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:rgba(5,8,5,.88);backdrop-filter:blur(20px)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;
+  color:var(--sprout);text-decoration:none;letter-spacing:1px}
+.page-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.back{font-family:'DM Mono',monospace;font-size:11px;color:var(--sprout);text-decoration:none;
+  border:1px solid var(--gborder);padding:5px 14px;border-radius:20px;transition:all .2s}
+.back:hover{background:rgba(122,182,72,.1);border-color:var(--sprout)}
+
+/* ── MAIN ── */
+main{position:relative;z-index:10;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:6rem 1.5rem 5rem;gap:2.2rem}
+
+/* ── HEADER ── */
+.eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:5px;
+  color:var(--sprout);text-transform:uppercase;text-align:center;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  opacity:0;animation:up .6s .1s ease forwards}
+.eyebrow::before,.eyebrow::after{content:'';width:30px;height:1px;background:var(--sprout);opacity:.35}
+h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:700;line-height:1.1;text-align:center;color:var(--cream);
+  opacity:0;animation:up .7s .2s ease forwards}
+h1 em{color:var(--sprout);font-style:italic}
+.sub{font-size:13px;font-weight:300;color:var(--muted);text-align:center;
+  max-width:460px;line-height:1.7;
+  opacity:0;animation:up .7s .3s ease forwards}
+
+/* ── DROPDOWN ── */
+.select-wrap{position:relative;width:100%;max-width:420px;
+  opacity:0;animation:up .7s .4s ease forwards}
+.crop-select{width:100%;padding:1rem 3rem 1rem 1.4rem;
+  background:var(--surface);border:1px solid var(--gborder);
+  border-radius:14px;font-family:'Cormorant Garamond',serif;
+  font-size:1.15rem;font-weight:600;color:var(--cream);
+  cursor:pointer;outline:none;appearance:none;
+  transition:border .25s;letter-spacing:.5px}
+.crop-select:focus{border-color:var(--sprout)}
+.crop-select option{background:#0d1a0d;color:var(--cream);font-family:'Inter',sans-serif;font-size:14px}
+.select-arrow{position:absolute;right:1rem;top:50%;transform:translateY(-50%);
+  color:var(--sprout);font-size:14px;pointer-events:none}
+
+/* ── CONTENT SECTIONS (hidden by default) ── */
+.crop-section{display:none;width:100%;max-width:860px;
+  flex-direction:column;gap:2.5rem;
+  animation:up .7s ease forwards}
+
+/* Show via CSS :has() */
+.page-wrap:has(#sel-wheat:checked)    .sec-wheat    {display:flex}
+.page-wrap:has(#sel-rice:checked)     .sec-rice     {display:flex}
+.page-wrap:has(#sel-maize:checked)    .sec-maize    {display:flex}
+.page-wrap:has(#sel-cotton:checked)   .sec-cotton   {display:flex}
+.page-wrap:has(#sel-sugarcane:checked) .sec-sugarcane{display:flex}
+.page-wrap:has(#sel-tomato:checked)   .sec-tomato   {display:flex}
+.page-wrap:has(#sel-potato:checked)   .sec-potato   {display:flex}
+.page-wrap:has(#sel-fava:checked)     .sec-fava     {display:flex}
+
+/* Hide prompt when a crop is selected */
+.page-wrap:has(input[name="crop"]:checked) .prompt{display:none}
+
+/* ── CROP HEADER ── */
+.crop-header{display:flex;align-items:center;gap:1.2rem;
+  background:var(--surface);border:1px solid var(--gborder);
+  border-radius:16px;padding:1.4rem 1.8rem}
+.crop-emoji{font-size:3rem;flex-shrink:0}
+.crop-title{font-family:'Cormorant Garamond',serif;font-size:2rem;
+  font-weight:700;color:var(--cream);line-height:1}
+.crop-title em{color:var(--sprout);font-style:italic}
+.crop-latin{font-family:'DM Mono',monospace;font-size:11px;
+  color:var(--muted);letter-spacing:1px;margin-top:.3rem}
+.crop-badges{display:flex;flex-wrap:wrap;gap:7px;margin-top:.7rem}
+.cbadge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
+  padding:4px 12px;border-radius:20px;border:1px solid var(--gborder);
+  color:var(--sprout);background:rgba(122,182,72,.08)}
+
+/* ── GROWTH STAGES ── */
+.section-label{font-family:'DM Mono',monospace;font-size:9px;
+  letter-spacing:4px;text-transform:uppercase;color:var(--sprout);
+  margin-bottom:.9rem}
+.stages-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.stage-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;transition:border .2s}
+.stage-card:hover{border-color:var(--gborder)}
+.stage-img{width:100%;height:140px;object-fit:cover;display:block;
+  background:rgba(122,182,72,.06)}
+.stage-body{padding:.8rem}
+.stage-num{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;
+  color:var(--sprout);margin-bottom:.3rem}
+.stage-name{font-size:13px;font-weight:500;color:var(--cream);margin-bottom:.2rem}
+.stage-desc{font-size:11px;color:var(--muted);line-height:1.5}
+
+/* ── TWO-COL: PLANTING + TIPS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.info-panel{background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:1.4rem 1.6rem}
+
+/* PLANTING STEPS */
+.steps-list{display:flex;flex-direction:column;gap:.8rem;margin-top:.4rem}
+.step-item{display:flex;gap:1rem;align-items:flex-start}
+.step-circle{flex-shrink:0;width:26px;height:26px;border-radius:50%;
+  background:rgba(122,182,72,.12);border:1px solid var(--gborder);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'DM Mono',monospace;font-size:10px;color:var(--sprout)}
+.step-text{font-size:13px;color:rgba(240,235,224,.8);line-height:1.6;padding-top:3px}
+
+/* TIPS */
+.tips-list{display:flex;flex-direction:column;gap:.7rem;margin-top:.4rem}
+.tip-item{display:flex;gap:.8rem;align-items:flex-start;
+  padding:.65rem .9rem;background:rgba(122,182,72,.04);
+  border:1px solid rgba(122,182,72,.08);border-radius:10px}
+.tip-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.tip-text{font-size:12px;color:rgba(240,235,224,.75);line-height:1.6}
+
+/* ── KEY FACTS ── */
+.facts-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.fact-box{background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:.9rem;text-align:center}
+.fact-icon{font-size:20px;margin-bottom:.4rem}
+.fact-val{font-family:'Cormorant Garamond',serif;font-size:1.2rem;
+  font-weight:700;color:var(--sprout);line-height:1}
+.fact-lbl{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;
+  color:var(--muted);margin-top:4px;text-transform:uppercase}
+
+/* ── PROMPT ── */
+.prompt{text-align:center;padding:3rem 2rem;
+  border:1px dashed var(--gborder);border-radius:20px;
+  background:rgba(14,22,14,.4);width:100%;max-width:860px}
+.prompt-icon{font-size:52px;opacity:.25;margin-bottom:.8rem}
+.prompt-txt{font-family:'DM Mono',monospace;font-size:11px;
+  letter-spacing:2px;color:var(--muted)}
+
+/* Hidden radio */
+input[type="radio"]{display:none}
+
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:700px){
+  .stages-grid{grid-template-columns:repeat(2,1fr)}
+  .two-col{grid-template-columns:1fr}
+  .facts-grid{grid-template-columns:repeat(2,1fr)}
+  .page-tag{display:none}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid-ol"></div>
+<div class="soil-strip"></div>
+
+<div class="topbar">
+  <a href="../Page One/AgriAdvisor-index.html" class="logo">AgriAdvisor</a>
+  <div class="page-tag">04 · Crop Guide</div>
+  <a href="../Page One/AgriAdvisor-index.html" class="back">← Home</a>
+</div>
+
+<main>
+  <div>
+    <div class="eyebrow">Model 04</div>
+    <h1>Crop <em>Guide</em></h1>
+    <p class="sub" style="margin-top:.6rem">Select a crop to explore its growth stages, planting method, and expert tips.</p>
+  </div>
+
+  <!-- WRAPPER for CSS :has() -->
+  <div class="page-wrap" style="width:100%;max-width:860px;display:contents">
+
+    <!-- Hidden radios -->
+    <input type="radio" name="crop" id="sel-wheat">
+    <input type="radio" name="crop" id="sel-rice">
+    <input type="radio" name="crop" id="sel-maize">
+    <input type="radio" name="crop" id="sel-cotton">
+    <input type="radio" name="crop" id="sel-sugarcane">
+    <input type="radio" name="crop" id="sel-tomato">
+    <input type="radio" name="crop" id="sel-potato">
+    <input type="radio" name="crop" id="sel-fava">
+
+    <!-- DROPDOWN -->
+    <div class="select-wrap">
+      <select class="crop-select" onchange="selectCrop(this.value)">
+        <option value="">— Select a Crop —</option>
+        <option value="sel-wheat">🌾  Wheat</option>
+        <option value="sel-rice">🍚  Rice</option>
+        <option value="sel-maize">🌽  Maize (Corn)</option>
+        <option value="sel-cotton">🌸  Cotton</option>
+        <option value="sel-sugarcane">🎋  Sugarcane</option>
+        <option value="sel-tomato">🍅  Tomato</option>
+        <option value="sel-potato">🥔  Potato</option>
+        <option value="sel-fava">🫘  Fava Beans</option>
+      </select>
+      <div class="select-arrow">▾</div>
+    </div>
+
+    <!-- DEFAULT PROMPT -->
+    <div class="prompt">
+      <div class="prompt-icon">🌱</div>
+      <div class="prompt-txt">Choose a crop above to see its full guide</div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         WHEAT
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-wheat">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🌾</div>
+        <div>
+          <div class="crop-title">Wh<em>eat</em></div>
+          <div class="crop-latin">Triticum aestivum</div>
+          <div class="crop-badges">
+            <span class="cbadge">Winter Crop</span>
+            <span class="cbadge">All Regions</span>
+            <span class="cbadge">Strategic Cereal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Growth Stages -->
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/wheat 1.jpg" alt="Wheat germination">
+            <div class="stage-body">
+              <div class="stage-num">STAGE 01</div>
+              <div class="stage-name">Germination</div>
+              <div class="stage-desc">Seeds sprout 5–7 days after sowing. Soil moisture is critical.</div>
+            </div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/wheat 2.jpg" alt="Wheat tillering">
+            <div class="stage-body">
+              <div class="stage-num">STAGE 02</div>
+              <div class="stage-name">Tillering</div>
+              <div class="stage-desc">Multiple shoots develop from the base. Apply nitrogen fertilizer.</div>
+            </div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/wheat 3.jpg" alt="Wheat heading">
+            <div class="stage-body">
+              <div class="stage-num">STAGE 03</div>
+              <div class="stage-name">Heading</div>
+              <div class="stage-desc">Ears emerge and grain formation begins. Avoid water stress.</div>
+            </div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/wheat 4.jpg" alt="Wheat harvest">
+            <div class="stage-body">
+              <div class="stage-num">STAGE 04</div>
+              <div class="stage-name">Harvest</div>
+              <div class="stage-desc">Ready when grain moisture drops to 14%. Harvest April–May.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Planting Method -->
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Prepare soil by deep plowing 20–25 cm and leveling the field.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Sow seeds at 60–70 kg/feddan using broadcast or drill method, depth 3–5 cm.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Apply 150 kg/feddan compound fertilizer (15-15-15) at planting.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Irrigate immediately after sowing, then every 15–20 days (6–8 irrigations total).</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Apply nitrogen top-dressing at tillering stage (45 days after sowing).</div></div>
+          </div>
+        </div>
+        <!-- Tips -->
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">🌡️</div><div class="tip-text">Best sowing temperature: 10–15°C. Sow November–December in Egypt.</div></div>
+            <div class="tip-item"><div class="tip-icon">💧</div><div class="tip-text">Do not irrigate within 15 days before harvest to ensure dry, clean grain.</div></div>
+            <div class="tip-item"><div class="tip-icon">🐛</div><div class="tip-text">Monitor for rust disease (yellow-brown spots). Apply fungicide at first sign.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌾</div><div class="tip-text">Use certified disease-resistant varieties like Misr 1 or Giza 168 for best results.</div></div>
+            <div class="tip-item"><div class="tip-icon">📦</div><div class="tip-text">Store at moisture below 12% to prevent mold and aflatoxin contamination.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">120–130</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">6–8</div><div class="fact-lbl">Irrigations</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">10–20°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">2.85 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         RICE
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-rice">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🍚</div>
+        <div>
+          <div class="crop-title">Ri<em>ce</em></div>
+          <div class="crop-latin">Oryza sativa</div>
+          <div class="crop-badges">
+            <span class="cbadge">Summer Crop</span>
+            <span class="cbadge">Delta / North Coast</span>
+            <span class="cbadge">Flood Irrigated</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/rice 1.jpg" alt="Rice seedling">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Seedling</div><div class="stage-desc">Nursery beds prepared. Transplant seedlings at 20–25 days old.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/rice 2.jpg" alt="Rice tillering">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Tillering</div><div class="stage-desc">Active shoot multiplication. Maintain 5–7 cm flood depth.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/rice 3.jpg" alt="Rice flowering">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Flowering</div><div class="stage-desc">Panicles emerge. Avoid drought stress — critical for grain set.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/rice 4.jpg" alt="Rice harvest">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Harvest</div><div class="stage-desc">Drain field 10 days before harvest. Ready Sept–October.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Prepare nursery beds and sow pre-germinated seeds at 40–50 kg/feddan.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Flood main field and puddle soil to seal it before transplanting.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Transplant 2–3 seedlings per hill, 20×20 cm spacing.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Apply urea in 3 splits: at transplanting, tillering, and panicle initiation.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Maintain flood irrigation until 10 days before harvest.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">🌊</div><div class="tip-text">Rice in the Delta prevents seawater intrusion — essential for soil health.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌡️</div><div class="tip-text">Optimal temperature 25–35°C. Temperature below 20°C delays heading.</div></div>
+            <div class="tip-item"><div class="tip-icon">🐛</div><div class="tip-text">Watch for stem borer and leaf blast. Use resistant varieties like Sakha 101.</div></div>
+            <div class="tip-item"><div class="tip-icon">💧</div><div class="tip-text">Use early-maturing varieties to reduce water use by 30% compared to traditional.</div></div>
+            <div class="tip-item"><div class="tip-icon">📋</div><div class="tip-text">Government allocates licensed rice areas — check annual limits before planting.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">90–120</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">Flood</div><div class="fact-lbl">Irrigation Type</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">25–35°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">3.90 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         MAIZE
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-maize">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🌽</div>
+        <div>
+          <div class="crop-title">Ma<em>ize</em></div>
+          <div class="crop-latin">Zea mays</div>
+          <div class="crop-badges">
+            <span class="cbadge">Summer / Nile Crop</span>
+            <span class="cbadge">All Regions</span>
+            <span class="cbadge">High Nitrogen Feeder</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/maize1.jpg" alt="Maize emergence">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Emergence</div><div class="stage-desc">Seedlings emerge 5–7 days after sowing. Ensure soil moisture.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/maize2.jpg" alt="Maize vegetative">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Vegetative</div><div class="stage-desc">Rapid leaf development. Apply nitrogen at 6–8 leaf stage.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/maiz3.jpg" alt="Maize silking">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Silking</div><div class="stage-desc">Tassels and silks appear. Critical pollination window — avoid drought.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/maiz4.jpg" alt="Maize maturity">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Maturity</div><div class="stage-desc">Husks dry and grain dents. Harvest when husks turn brown.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Plow soil to 25 cm and add organic matter before sowing.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Sow 2 seeds per hill, 25×70 cm spacing, depth 4–5 cm. Rate: 8–10 kg/feddan.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Apply phosphate fertilizer at planting and urea in 2–3 splits.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Irrigate every 10–12 days. Critical to avoid drought at silking stage.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Thin to 1 plant per hill at 3-leaf stage. Remove weak plants.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">🌡️</div><div class="tip-text">Maize needs 25–33°C for optimal growth. Temperatures above 35°C reduce yield.</div></div>
+            <div class="tip-item"><div class="tip-icon">🐛</div><div class="tip-text">Fall armyworm is the main threat. Monitor leaves and apply insecticide early.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌽</div><div class="tip-text">Use hybrid varieties (single-cross or three-way cross) for 20–30% higher yield.</div></div>
+            <div class="tip-item"><div class="tip-icon">💧</div><div class="tip-text">Drip irrigation saves 35% water and boosts yield by up to 25% vs. flood.</div></div>
+            <div class="tip-item"><div class="tip-icon">🔄</div><div class="tip-text">Rotate with wheat or fava beans to break pest cycles and improve soil fertility.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">90–110</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">7–9</div><div class="fact-lbl">Irrigations</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">25–33°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">3.40 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         COTTON
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-cotton">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🌸</div>
+        <div>
+          <div class="crop-title">Cot<em>ton</em></div>
+          <div class="crop-latin">Gossypium barbadense</div>
+          <div class="crop-badges">
+            <span class="cbadge">Summer Crop</span>
+            <span class="cbadge">Delta / Upper Egypt</span>
+            <span class="cbadge">Egyptian Long-Staple</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/cotton1.jpg" alt="Cotton emergence">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Emergence</div><div class="stage-desc">Seedlings emerge 7–10 days after sowing. Ensure soil temp above 18°C.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/cotton2.jpg" alt="Cotton squaring">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Squaring</div><div class="stage-desc">First flower buds (squares) appear. Apply phosphate and nitrogen.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/cotton3.jpg" alt="Cotton boll formation">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Boll Formation</div><div class="stage-desc">Flowers bloom and bolls develop. Protect from bollworm and aphids.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/cotton4.jpg" alt="Cotton harvest">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Harvest</div><div class="stage-desc">Bolls open and fiber fluffs. Hand-pick Sept–November for quality.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Prepare ridges 60–70 cm apart. Sow 3 seeds per hill, 25–30 cm apart.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Sowing rate: 8–10 kg/feddan. Depth: 3–4 cm. Sow March–April.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Thin to 1–2 plants per hill at first true leaf stage.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Apply NPK in 3 stages: planting, first square, and boll formation.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Irrigate every 15–18 days. Stop irrigation 3 weeks before harvest.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">✂️</div><div class="tip-text">Remove top of plant (topping) at 100 cm height to concentrate energy in bolls.</div></div>
+            <div class="tip-item"><div class="tip-icon">🐛</div><div class="tip-text">Pink bollworm is the main pest. Use pheromone traps and spray on schedule.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌸</div><div class="tip-text">Egyptian Giza cotton (extra-long staple) commands premium world market prices.</div></div>
+            <div class="tip-item"><div class="tip-icon">🤲</div><div class="tip-text">Hand-pick carefully in 3–4 rounds to maintain fiber quality and avoid contamination.</div></div>
+            <div class="tip-item"><div class="tip-icon">🔄</div><div class="tip-text">Rotate with wheat or clover — never follow with cotton again for 2 years minimum.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">180–200</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">8–10</div><div class="fact-lbl">Irrigations</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">28–35°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">0.78 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         SUGARCANE
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-sugarcane">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🎋</div>
+        <div>
+          <div class="crop-title">Sugar<em>cane</em></div>
+          <div class="crop-latin">Saccharum officinarum</div>
+          <div class="crop-badges">
+            <span class="cbadge">Year-Round Crop</span>
+            <span class="cbadge">Upper Egypt Only</span>
+            <span class="cbadge">Sugar Industry</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/sugarcane1.jpg" alt="Sugarcane sprouting">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Sprouting</div><div class="stage-desc">Setts (cuttings) sprout within 2–3 weeks. Keep soil moist.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/sugarcane2.jpg" alt="Sugarcane tillering">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Tillering</div><div class="stage-desc">Multiple shoots develop. Apply heavy nitrogen fertilization.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/sugarcane3.jpg" alt="Sugarcane grand growth">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Grand Growth</div><div class="stage-desc">Rapid elongation phase. Can grow 30 cm/week. High water demand.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/sugarcane4.jpg" alt="Sugarcane maturity">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Maturity</div><div class="stage-desc">Sugar accumulates as growth slows. Harvest 10–12 months after planting.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Prepare furrows 120–140 cm apart and 20–25 cm deep.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Place setts (2-bud cuttings) end-to-end in furrows. Cover with 5 cm soil.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Apply heavy basal fertilization: 40 kg P + 30 kg K per feddan at planting.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Irrigate immediately after planting, then every 10–15 days in summer.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Allow ratoon (regrowth) for 2–3 seasons to reduce replanting costs.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">🌡️</div><div class="tip-text">Sugarcane needs sustained heat above 30°C — Upper Egypt's climate is uniquely suited.</div></div>
+            <div class="tip-item"><div class="tip-icon">💧</div><div class="tip-text">Drip irrigation reduces water use by 40% and increases sugar content significantly.</div></div>
+            <div class="tip-item"><div class="tip-icon">✂️</div><div class="tip-text">Burn or remove dry leaves (trashing) to reduce pest habitat and ease harvest.</div></div>
+            <div class="tip-item"><div class="tip-icon">📅</div><div class="tip-text">Harvest in December–March when sugar content peaks and temperatures are cooler.</div></div>
+            <div class="tip-item"><div class="tip-icon">🏭</div><div class="tip-text">Deliver to factory within 24 hours of cutting to prevent sugar inversion losses.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">10–12</div><div class="fact-lbl">Months to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">20–25</div><div class="fact-lbl">Irrigations</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">30–38°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">47 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         TOMATO
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-tomato">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🍅</div>
+        <div>
+          <div class="crop-title">Tom<em>ato</em></div>
+          <div class="crop-latin">Solanum lycopersicum</div>
+          <div class="crop-badges">
+            <span class="cbadge">3 Seasons</span>
+            <span class="cbadge">All Regions</span>
+            <span class="cbadge">High Value Crop</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/tomato 1.jpg" alt="Tomato transplanting">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Transplanting</div><div class="stage-desc">Seedlings transplanted at 25–30 days. Space 50×100 cm.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/tomato 2.jpg" alt="Tomato flowering">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Flowering</div><div class="stage-desc">Yellow flowers appear 35–40 days after transplanting. Ensure pollination.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/tomato 3.jpg" alt="Tomato fruit set">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Fruit Set</div><div class="stage-desc">Small green tomatoes form. Apply potassium to improve fruit quality.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/tomato 4.jpg" alt="Tomato ripening">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Harvest</div><div class="stage-desc">Harvest when 60–70% colored. Multiple picks over 4–6 weeks.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Start seeds in nursery trays. Transplant at 4–6 true leaf stage.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Prepare beds with compost. Plant 50 cm between plants, 100 cm rows.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Install drip irrigation before planting for water and fertilizer efficiency.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Apply fertigation: nitrogen-heavy early, potassium-heavy at fruit fill stage.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Stake plants and prune to 1–2 main stems for better air circulation.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">🌡️</div><div class="tip-text">Ideal fruit set: 18–24°C night / 25–30°C day. Above 35°C causes flower drop.</div></div>
+            <div class="tip-item"><div class="tip-icon">🦠</div><div class="tip-text">Use certified disease-free seed and rotate with non-solanaceous crops every season.</div></div>
+            <div class="tip-item"><div class="tip-icon">💧</div><div class="tip-text">Irregular irrigation causes blossom-end rot and fruit cracking. Keep consistent moisture.</div></div>
+            <div class="tip-item"><div class="tip-icon">🍅</div><div class="tip-text">For processing tomatoes, machine harvest when 95% red. For fresh market, hand-pick.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌿</div><div class="tip-text">Remove suckers (side shoots) weekly to direct energy into fewer, larger fruits.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">75–90</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">Drip</div><div class="fact-lbl">Best Irrigation</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">20–28°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">11.5 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         POTATO
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-potato">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🥔</div>
+        <div>
+          <div class="crop-title">Pot<em>ato</em></div>
+          <div class="crop-latin">Solanum tuberosum</div>
+          <div class="crop-badges">
+            <span class="cbadge">Winter / Nile Crop</span>
+            <span class="cbadge">Delta / North Coast</span>
+            <span class="cbadge">Export Crop</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/potato1.jpg" alt="Potato sprouting">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Sprouting</div><div class="stage-desc">Seed tubers sprout 10–15 days after planting. Cool soil required.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/potato2.jpg" alt="Potato vegetative">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Vegetative</div><div class="stage-desc">Canopy develops rapidly. Stolons begin forming underground.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/potato3.jpg" alt="Potato tuber formation">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Tuber Fill</div><div class="stage-desc">Tubers swell rapidly. Adequate potassium ensures size and starch.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/potato4.jpg" alt="Potato harvest">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Harvest</div><div class="stage-desc">Vine dies back naturally. Harvest 90–110 days after planting.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Use certified seed tubers (30–60 g each). Cut large tubers with a clean blade.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Plant in ridges 70–75 cm apart, 25–30 cm between tubers, depth 10–12 cm.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Apply 200 kg/feddan compound fertilizer (12-12-17) at planting.</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Irrigate every 8–10 days using drip or sprinkler. Avoid over-irrigation.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Earth up (hill) soil around plants when 20 cm tall to prevent greening of tubers.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">❄️</div><div class="tip-text">Optimal tuber formation at 15–18°C soil temperature. Avoid heat above 25°C.</div></div>
+            <div class="tip-item"><div class="tip-icon">🍄</div><div class="tip-text">Late blight is the most destructive disease. Apply fungicide preventively in humid weather.</div></div>
+            <div class="tip-item"><div class="tip-icon">🥔</div><div class="tip-text">Egyptian potatoes are highly valued in Gulf and EU export markets — maintain quality.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌱</div><div class="tip-text">Use imported certified Dutch or Scottish seed for first crop. Local seed for second.</div></div>
+            <div class="tip-item"><div class="tip-icon">📦</div><div class="tip-text">Cure harvested tubers at 15°C for 2 weeks before storage to heal skin wounds.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">90–110</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">8–12</div><div class="fact-lbl">Irrigations</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">15–20°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">8.50 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════
+         FAVA BEANS
+    ════════════════════════════════════════════════════ -->
+    <div class="crop-section sec-fava">
+
+      <div class="crop-header">
+        <div class="crop-emoji">🫘</div>
+        <div>
+          <div class="crop-title">Fava <em>Beans</em></div>
+          <div class="crop-latin">Vicia faba</div>
+          <div class="crop-badges">
+            <span class="cbadge">Winter Crop</span>
+            <span class="cbadge">All Regions</span>
+            <span class="cbadge">Nitrogen Fixer</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Growth Stages</div>
+        <div class="stages-grid">
+          <div class="stage-card">
+            <img class="stage-img" src="./images/fava1.jpg" alt="Fava beans germination">
+            <div class="stage-body"><div class="stage-num">STAGE 01</div><div class="stage-name">Germination</div><div class="stage-desc">Seeds germinate 7–10 days after sowing in cool, moist soil.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/fava2.JPG" alt="Fava beans vegetative">
+            <div class="stage-body"><div class="stage-num">STAGE 02</div><div class="stage-name">Vegetative</div><div class="stage-desc">Leaves develop and nitrogen-fixing nodules form on roots.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/fava3.jpg" alt="Fava beans flowering">
+            <div class="stage-body"><div class="stage-num">STAGE 03</div><div class="stage-name">Flowering</div><div class="stage-desc">White-black flowers bloom. Bees essential for good pollination.</div></div>
+          </div>
+          <div class="stage-card">
+            <img class="stage-img" src="./images/fava4.jpg" alt="Fava beans pods">
+            <div class="stage-body"><div class="stage-num">STAGE 04</div><div class="stage-name">Harvest</div><div class="stage-desc">Pods blacken and dry. Harvest March–April when fully mature.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-panel">
+          <div class="section-label">Planting Method</div>
+          <div class="steps-list">
+            <div class="step-item"><div class="step-circle">1</div><div class="step-text">Inoculate seeds with Rhizobium bacteria before sowing to enhance nitrogen fixation.</div></div>
+            <div class="step-item"><div class="step-circle">2</div><div class="step-text">Sow 50–60 kg/feddan broadcast or in rows 25–30 cm apart, depth 6–8 cm.</div></div>
+            <div class="step-item"><div class="step-circle">3</div><div class="step-text">Apply only phosphate and potassium — no nitrogen needed (fixed from air).</div></div>
+            <div class="step-item"><div class="step-circle">4</div><div class="step-text">Irrigate every 15–20 days (4–5 irrigations total). Avoid waterlogging.</div></div>
+            <div class="step-item"><div class="step-circle">5</div><div class="step-text">Harvest when 90% of pods are black and dry. Leave 5 days for field drying.</div></div>
+          </div>
+        </div>
+        <div class="info-panel">
+          <div class="section-label">Expert Tips</div>
+          <div class="tips-list">
+            <div class="tip-item"><div class="tip-icon">🌡️</div><div class="tip-text">Best germination at 5–10°C. Frost during flowering reduces yield significantly.</div></div>
+            <div class="tip-item"><div class="tip-icon">🐝</div><div class="tip-text">Place beehives near the field during flowering to maximize pollination by up to 40%.</div></div>
+            <div class="tip-item"><div class="tip-icon">🌿</div><div class="tip-text">Fava beans improve soil fertility — rotate before wheat or maize for free nitrogen benefit.</div></div>
+            <div class="tip-item"><div class="tip-icon">🐛</div><div class="tip-text">Aphids (black bean aphid) are the main pest. Spray insecticidal soap at first infestation.</div></div>
+            <div class="tip-item"><div class="tip-icon">🫘</div><div class="tip-text">Egyptian ful medames (fava beans) is a national staple — local demand is always strong.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-label">Key Facts</div>
+        <div class="facts-grid">
+          <div class="fact-box"><div class="fact-icon">📅</div><div class="fact-val">140–160</div><div class="fact-lbl">Days to Harvest</div></div>
+          <div class="fact-box"><div class="fact-icon">💧</div><div class="fact-val">4–5</div><div class="fact-lbl">Irrigations</div></div>
+          <div class="fact-box"><div class="fact-icon">🌡️</div><div class="fact-val">8–15°C</div><div class="fact-lbl">Ideal Temp</div></div>
+          <div class="fact-box"><div class="fact-icon">📦</div><div class="fact-val">0.88 T</div><div class="fact-lbl">Avg Yield/Feddan</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /page-wrap -->
+</main>
+
+<script>
+// One line of JS just to sync the dropdown with the hidden radios
+function selectCrop(id) {
+  if (id) document.getElementById(id).checked = true;
+}
+</script>
+
+</body>
+</html>

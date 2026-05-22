@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriAdvisor — Yield Estimator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e0a;--surface:rgba(18,28,18,0.75);
+  --gold:#c8a84b;--gold-dim:rgba(200,168,75,0.15);--gold-border:rgba(200,168,75,0.22);
+  --green:#4a7c3f;--sprout:#7ab648;
+  --cream:#f0ebe0;--muted:rgba(240,235,224,0.5);
+  --border:rgba(240,235,224,0.1);
+}
+html,body{min-height:100vh;font-family:'Inter',sans-serif;background:var(--bg);color:var(--cream);overflow-x:hidden}
+
+/* BG */
+.bg{position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 50% 60% at 0% 0%,rgba(74,124,63,.18) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 50% at 100% 100%,rgba(200,168,75,.10) 0%,transparent 60%),
+    radial-gradient(ellipse 60% 40% at 50% 100%,rgba(30,20,10,.8) 0%,transparent 70%),
+    linear-gradient(170deg,#080d08 0%,#0a0e0a 60%,#0d0c08 100%);
+}
+.grid-ol{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(200,168,75,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(200,168,75,.018) 1px,transparent 1px);
+  background-size:70px 70px}
+.soil-strip{position:fixed;bottom:0;left:0;right:0;height:3px;z-index:50;
+  background:linear-gradient(90deg,#2a1a08,#5c3d1e,#c8923a,#5c3d1e,#2a1a08);
+  background-size:200%;animation:soilFlow 10s linear infinite}
+@keyframes soilFlow{to{background-position:200% 0}}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:.9rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:rgba(8,13,8,.85);backdrop-filter:blur(20px)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;
+  color:var(--gold);text-decoration:none;letter-spacing:1px}
+.page-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.back{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);text-decoration:none;
+  border:1px solid var(--gold-border);padding:5px 14px;border-radius:20px;transition:all .2s}
+.back:hover{background:var(--gold-dim)}
+
+/* MAIN */
+main{position:relative;z-index:10;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:6rem 1.5rem 5rem;gap:2rem}
+
+/* HEADER */
+.eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:5px;
+  color:var(--gold);text-transform:uppercase;text-align:center;margin-bottom:.8rem;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  opacity:0;animation:up .6s .1s ease forwards}
+.eyebrow::before,.eyebrow::after{content:'';width:35px;height:1px;background:var(--gold);opacity:.35}
+h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,6vw,3.8rem);
+  font-weight:700;line-height:1;text-align:center;color:var(--cream);
+  opacity:0;animation:up .7s .2s ease forwards}
+h1 em{color:var(--gold);font-style:italic}
+.sub{font-size:15px;font-weight:300;color:var(--muted);text-align:center;max-width:480px;line-height:1.7;
+  opacity:0;animation:up .7s .3s ease forwards}
+
+/* TWO-COL LAYOUT */
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;
+  width:100%;max-width:1060px;
+  opacity:0;animation:up .8s .4s ease forwards}
+
+/* FORM PANEL */
+.panel{background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:1.8rem;backdrop-filter:blur(16px)}
+.panel-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;
+  color:var(--gold);text-transform:uppercase;margin-bottom:1.4rem;
+  display:flex;align-items:center;gap:8px}
+.panel-title::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--gold-border),transparent)}
+
+/* SELECTOR GROUP */
+.sel-group{margin-bottom:1rem}
+.sel-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:.6rem}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1rem}
+.form-row .sel-group{margin-bottom:0}
+
+/* Radio buttons CSS-only */
+input[type="radio"]{display:none}
+.opt{display:inline-flex;align-items:center;gap:6px;
+  background:rgba(8,13,8,.8);border:1px solid var(--border);
+  border-radius:8px;padding:7px 13px;font-size:13px;color:var(--muted);
+  cursor:pointer;transition:all .2s;user-select:none}
+.opt:hover{border-color:rgba(200,168,75,.35);color:var(--cream)}
+input[type="radio"]:checked + .opt{
+  border-color:var(--gold);color:var(--cream);
+  background:var(--gold-dim);box-shadow:0 0 0 1px rgba(200,168,75,.15)}
+input[type="radio"]:checked + .opt::after{content:'✓';color:var(--gold);font-size:10px;margin-left:2px}
+.oi{font-size:13px}
+
+/* TEXT INPUT for area */
+.area-input-wrap{position:relative}
+.area-input{width:100%;padding:11px 50px 11px 14px;
+  background:rgba(8,13,8,.8);border:1px solid var(--border);
+  border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;
+  color:var(--cream);outline:none;transition:border .2s;
+  -moz-appearance:textfield;
+  -moz-appearance: textfield;
+  appearance: textfield;}
+.area-input::-webkit-outer-spin-button,.area-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.area-input::placeholder{color:rgba(240,235,224,.25)}
+.area-input:focus{border-color:var(--gold);background:rgba(12,18,12,.9)}
+.area-unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px}
+
+/* SUBMIT */
+.submit-btn{width:100%;padding:.95rem;border-radius:12px;margin-top:.4rem;
+  background:linear-gradient(135deg,var(--green),#3a6230);
+  border:1px solid rgba(122,182,72,.25);
+  font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;
+  color:var(--cream);cursor:pointer;transition:all .25s;letter-spacing:.5px}
+.submit-btn:hover{background:linear-gradient(135deg,#5a8a4f,#4a7240);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.submit-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+/* RESULT PANEL */
+.result-panel{background:var(--surface);border:1px solid var(--gold-border);
+  border-radius:20px;padding:1.8rem;backdrop-filter:blur(16px);
+  display:flex;flex-direction:column;gap:1.2rem;position:relative;overflow:hidden}
+.result-panel::before{content:'';position:absolute;top:-40px;right:-40px;
+  width:160px;height:160px;border-radius:50%;
+  background:radial-gradient(circle,rgba(200,168,75,.08) 0%,transparent 70%);pointer-events:none}
+
+.result-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;
+  color:var(--gold);text-transform:uppercase}
+
+/* BIG NUMBER */
+.big-number-wrap{text-align:center;padding:.7rem 0}
+.big-number{font-family:'Cormorant Garamond',serif;
+  font-size:clamp(4rem,10vw,6rem);font-weight:700;
+  line-height:1;color:var(--cream)}
+.big-number em{color:var(--gold)}
+.big-unit{font-family:'DM Mono',monospace;font-size:12px;
+  letter-spacing:3px;color:var(--muted);margin-top:.4rem}
+
+/* BREAKDOWN ROWS */
+.breakdown{display:flex;flex-direction:column;gap:.7rem}
+.brow{display:flex;justify-content:space-between;align-items:center;
+  padding:.7rem .9rem;background:rgba(8,13,8,.6);border:1px solid var(--border);border-radius:10px}
+.brow-label{font-size:13px;color:var(--muted)}
+.brow-val{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:700;color:var(--cream)}
+.brow-val em{color:var(--gold)}
+
+/* BAR */
+.bar-wrap{margin-top:.4rem}
+.bar-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:.4rem}
+.bar-track{height:6px;background:rgba(240,235,224,.08);border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--gold));
+  width:0%;transition:width 1s .3s ease}
+
+/* PLACEHOLDER when no result */
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;text-align:center;padding:2rem;gap:.8rem;min-height:200px}
+.placeholder-icon{font-size:52px;opacity:.25}
+.placeholder-txt{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted)}
+
+/* LOADING */
+.loading{display:none;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;gap:.8rem;min-height:200px}
+.loading.show{display:flex}
+.dots{display:flex;gap:7px}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--gold);animation:bounce .8s ease-in-out infinite}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+.loading-txt{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted)}
+
+/* ERROR */
+.error-box{display:none;text-align:center;padding:1.5rem;
+  border:1px solid rgba(220,80,80,.2);border-radius:12px;background:rgba(220,80,80,.05);margin-top:.5rem}
+.error-box.show{display:block}
+.error-txt{font-size:12px;color:rgba(240,180,180,.7);line-height:1.6}
+
+/* RESET */
+.reset-btn{background:transparent;border:1px solid var(--border);border-radius:10px;
+  padding:.7rem;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);
+  cursor:pointer;transition:all .2s;width:100%;margin-top:.5rem}
+.reset-btn:hover{border-color:var(--gold);color:var(--cream)}
+
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+.next-page-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:.85rem 2.5rem;border-radius:12px;border:1px solid var(--gold-border);background:var(--gold-dim);font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--cream);text-decoration:none;letter-spacing:.5px;transition:all .25s}
+.next-page-btn:hover{background:rgba(200,168,75,.22);border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+
+@media(max-width:680px){
+  .layout{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .page-tag{display:none}
+}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid-ol"></div>
+<div class="soil-strip"></div>
+
+<div class="topbar">
+  <a href="../Page One/AgriAdvisor-index.html" class="logo">AgriAdvisor</a>
+  <div class="page-tag">02 · Yield Estimator</div>
+  <a href="../Page One/AgriAdvisor-index.html" class="back">← Home</a>
+</div>
+
+<main>
+  <div>
+    <div class="eyebrow">Model 02</div>
+    <h1>Yield <em>Estimator</em></h1>
+    <p class="sub" style="margin-top:.6rem">Enter your crop details and we'll estimate the expected harvest in tons.</p>
+  </div>
+
+  <div class="layout">
+
+    <!-- LEFT: FORM -->
+    <div class="panel">
+      <div class="panel-title">Field Details</div>
+
+      <!-- Crop -->
+      <div class="sel-group">
+        <div class="sel-label">Crop</div>
+        <div class="opts">
+          <input type="radio" name="crop" id="c-wheat"><label for="c-wheat" class="opt"><span class="oi">🌾</span> Wheat</label>
+          <input type="radio" name="crop" id="c-rice"><label for="c-rice" class="opt"><span class="oi">🍚</span> Rice</label>
+          <input type="radio" name="crop" id="c-maize"><label for="c-maize" class="opt"><span class="oi">🌽</span> Maize</label>
+          <input type="radio" name="crop" id="c-cotton"><label for="c-cotton" class="opt"><span class="oi">🌸</span> Cotton</label>
+          <input type="radio" name="crop" id="c-sugarcane"><label for="c-sugarcane" class="opt"><span class="oi">🎋</span> Sugarcane</label>
+          <input type="radio" name="crop" id="c-tomato"><label for="c-tomato" class="opt"><span class="oi">🍅</span> Tomato</label>
+          <input type="radio" name="crop" id="c-potato"><label for="c-potato" class="opt"><span class="oi">🥔</span> Potato</label>
+          <input type="radio" name="crop" id="c-fava"><label for="c-fava" class="opt"><span class="oi">🫘</span> Fava Beans</label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <!-- Season -->
+        <div class="sel-group">
+          <div class="sel-label">Season</div>
+          <div class="opts">
+            <input type="radio" name="season" id="se-winter"><label for="se-winter" class="opt"><span class="oi">❄️</span> Winter</label>
+            <input type="radio" name="season" id="se-summer"><label for="se-summer" class="opt"><span class="oi">🌞</span> Summer</label>
+            <input type="radio" name="season" id="se-nile"><label for="se-nile" class="opt"><span class="oi">💧</span> Nile</label>
+          </div>
+        </div>
+        <!-- Soil -->
+        <div class="sel-group">
+          <div class="sel-label">Soil Type</div>
+          <div class="opts">
+            <input type="radio" name="soil" id="s-clay"><label for="s-clay" class="opt"><span class="oi">🏔️</span> Clay</label>
+            <input type="radio" name="soil" id="s-loamy"><label for="s-loamy" class="opt"><span class="oi">🌍</span> Loamy</label>
+            <input type="radio" name="soil" id="s-cal"><label for="s-cal" class="opt"><span class="oi">⬜</span> Calcareous</label>
+            <input type="radio" name="soil" id="s-sandy"><label for="s-sandy" class="opt"><span class="oi">🏜️</span> Sandy</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <!-- Region -->
+        <div class="sel-group">
+          <div class="sel-label">Region</div>
+          <div class="opts">
+            <input type="radio" name="region" id="r-delta"><label for="r-delta" class="opt"><span class="oi">🌿</span> Delta</label>
+            <input type="radio" name="region" id="r-ue"><label for="r-ue" class="opt"><span class="oi">☀️</span> Upper Egypt</label>
+            <input type="radio" name="region" id="r-nc"><label for="r-nc" class="opt"><span class="oi">🌊</span> North Coast</label>
+            <input type="radio" name="region" id="r-sinai"><label for="r-sinai" class="opt"><span class="oi">🏕️</span> Sinai</label>
+            <input type="radio" name="region" id="r-nl"><label for="r-nl" class="opt"><span class="oi">🌱</span> New Lands</label>
+          </div>
+        </div>
+        <!-- Area -->
+        <div class="sel-group">
+          <div class="sel-label">Area Planted</div>
+          <div class="area-input-wrap">
+            <input type="number" class="area-input" id="area-input"
+              placeholder="e.g. 5" min="0.5" max="500" step="0.5">
+            <span class="area-unit">Feddan</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="predict()" disabled>
+        Estimate Yield →
+      </button>
+      <div class="error-box" id="err"><div class="error-txt" id="err-txt">—</div></div>
+    </div>
+
+    <!-- RIGHT: RESULT -->
+    <div class="panel result-panel" id="result-panel">
+
+      <!-- Placeholder -->
+      <div class="placeholder" id="placeholder">
+        <div class="placeholder-icon">📊</div>
+        <div class="placeholder-txt">Fill in the details<br>to see your yield estimate</div>
+      </div>
+
+      <!-- Loading -->
+      <div class="loading" id="loading">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="loading-txt">Calculating yield...</div>
+      </div>
+
+      <!-- Result (hidden by default) -->
+      <div id="result-content" style="display:none;flex-direction:column;gap:.8rem">
+
+        <div class="result-label" id="res-combo">—</div>
+
+        <!-- Big number -->
+        <div class="big-number-wrap">
+          <div class="big-number" id="res-total">—<em> T</em></div>
+          <div class="big-unit">TOTAL ESTIMATED YIELD</div>
+        </div>
+
+        <!-- Breakdown -->
+        <div class="breakdown">
+          <div class="brow">
+            <span class="brow-label">Yield per Feddan</span>
+            <span class="brow-val" id="res-per-feddan">—<em> ton</em></span>
+          </div>
+          <div class="brow">
+            <span class="brow-label">Area Planted</span>
+            <span class="brow-val" id="res-area">—<em> feddan</em></span>
+          </div>
+          <div class="brow">
+            <span class="brow-label">Season</span>
+            <span class="brow-val" id="res-season">—</span>
+          </div>
+          <div class="brow">
+            <span class="brow-label">Soil Efficiency</span>
+            <span class="brow-val" id="res-soil-eff">—<em>%</em></span>
+          </div>
+        </div>
+
+        <!-- Bar -->
+        <div class="bar-wrap">
+          <div class="bar-label">Yield efficiency vs. national average</div>
+          <div class="bar-track"><div class="bar-fill" id="res-bar"></div></div>
+        </div>
+
+        <button class="reset-btn" onclick="resetForm()">↩ New Estimate</button>
+      </div>
+
+    </div>
+  </div>
+  <a href="../Page Four/AgriAdvisor-page4-profit.html" class="next-page-btn">Next Page: Profit Predictor →</a>
+</main>
+
+<script>
+const API = "http://localhost:8000/yield/predict";
+
+// Yield per feddan averages per crop (tons) — from real CAPMAS/FAO data
+const YIELD_PER_FEDDAN = {
+  "Wheat":      {"Clay":2.85,"Loamy":2.75,"Calcareous":2.20,"Sandy":1.80},
+  "Rice":       {"Clay":3.90,"Loamy":3.65,"Calcareous":2.80,"Sandy":2.40},
+  "Maize":      {"Clay":3.40,"Loamy":3.50,"Calcareous":2.70,"Sandy":2.60},
+  "Cotton":     {"Clay":0.78,"Loamy":0.75,"Calcareous":0.65,"Sandy":0.68},
+  "Sugarcane":  {"Clay":48.0,"Loamy":45.0,"Calcareous":38.0,"Sandy":35.0},
+  "Tomato":     {"Clay":12.0,"Loamy":12.5,"Calcareous":9.5, "Sandy":10.5},
+  "Potato":     {"Clay":8.50,"Loamy":9.00,"Calcareous":7.20,"Sandy":8.80},
+  "Fava Beans": {"Clay":0.90,"Loamy":0.85,"Calcareous":0.92,"Sandy":0.78},
+};
+// National average yield per feddan (for bar %)
+const NAT_AVG = {
+  "Wheat":2.85,"Rice":3.80,"Maize":3.40,"Cotton":0.78,
+  "Sugarcane":47.0,"Tomato":11.5,"Potato":8.50,"Fava Beans":0.88
+};
+// Region factor
+const REGION_F = {"Delta":1.00,"Upper_Egypt":0.92,"North_Coast":0.85,"Sinai":0.75,"NewLands":0.80};
+// Soil efficiency label
+const SOIL_EFF = {"Clay":100,"Loamy":96,"Calcareous":80,"Sandy":72};
+
+const CROP_MAP = {
+  "c-wheat":"Wheat","c-rice":"Rice","c-maize":"Maize","c-cotton":"Cotton",
+  "c-sugarcane":"Sugarcane","c-tomato":"Tomato","c-potato":"Potato","c-fava":"Fava Beans"
+};
+const SEASON_MAP = {"se-winter":"Winter","se-summer":"Summer","se-nile":"Nile"};
+const REGION_MAP = {"r-delta":"Delta","r-ue":"Upper_Egypt","r-nc":"North_Coast","r-sinai":"Sinai","r-nl":"NewLands"};
+const REGION_LABEL = {"Delta":"Delta","Upper_Egypt":"Upper Egypt","North_Coast":"North Coast","Sinai":"Sinai","NewLands":"New Lands"};
+const SOIL_MAP = {"s-clay":"Clay","s-loamy":"Loamy","s-cal":"Calcareous","s-sandy":"Sandy"};
+
+function getSelected(name, map) {
+  for (const [id, val] of Object.entries(map)) {
+    if (document.getElementById(id)?.checked) return val;
+  }
+  return null;
+}
+
+function checkReady() {
+  const crop   = getSelected('crop', CROP_MAP);
+  const season = getSelected('season', SEASON_MAP);
+  const region = getSelected('region', REGION_MAP);
+  const soil   = getSelected('soil', SOIL_MAP);
+  const area   = parseFloat(document.getElementById('area-input').value);
+  document.getElementById('submit-btn').disabled = !(crop && season && region && soil && area > 0);
+}
+
+// Wire up all inputs
+document.querySelectorAll('input[type="radio"]').forEach(r => r.addEventListener('change', checkReady));
+document.getElementById('area-input').addEventListener('input', checkReady);
+
+async function predict() {
+  const crop   = getSelected('crop', CROP_MAP);
+  const season = getSelected('season', SEASON_MAP);
+  const region = getSelected('region', REGION_MAP);
+  const soil   = getSelected('soil', SOIL_MAP);
+  const area   = parseFloat(document.getElementById('area-input').value);
+
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('err').classList.remove('show');
+
+  try {
+    const res  = await fetch(API, {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({crop, season, region, soil, area_feddans: area})
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+        //  validation error from  API
+        document.getElementById('loading').classList.remove('show');
+        document.getElementById('err').textContent = data.message || 'Invalid combination';
+        document.getElementById('err').classList.add('show');
+        return;
+    }
+
+    showResult(data.yield_per_feddan, data.total_yield, crop, season, region, soil, area);
+
+} catch (err) {
+    document.getElementById('loading').classList.remove('show');
+    document.getElementById('err').classList.add('show');
+  }
+}
+
+function showResult(yieldPerFeddan, totalYield, crop, season, region, soil, area) {
+  document.getElementById('loading').classList.remove('show');
+
+  const regionLabel = REGION_LABEL[region] || region;
+  const soilEff = SOIL_EFF[soil] || 85;
+  const natAvg  = NAT_AVG[crop] || 3;
+  const barPct  = Math.min(Math.round((yieldPerFeddan / natAvg) * 100), 100);
+
+  document.getElementById('res-combo').textContent     = `${crop} · ${regionLabel} · ${season}`;
+  document.getElementById('res-total').innerHTML       = `${totalYield}<em> T</em>`;
+  document.getElementById('res-per-feddan').innerHTML  = `${yieldPerFeddan}<em> ton</em>`;
+  document.getElementById('res-area').innerHTML        = `${area}<em> feddan</em>`;
+  document.getElementById('res-season').textContent    = season;
+  document.getElementById('res-soil-eff').innerHTML    = `${soilEff}<em>%</em>`;
+
+  document.getElementById('result-content').style.display = 'flex';
+  setTimeout(() => { document.getElementById('res-bar').style.width = barPct + '%'; }, 100);
+}
+
+function resetForm() {
+  document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+  document.getElementById('area-input').value = '';
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('res-bar').style.width = '0%';
+}
+</script>
+</body>
+</html>

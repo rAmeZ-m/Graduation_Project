@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriAdvisor — Profit Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600&family=Inter:wght@300;400;500&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080a0d;--surface:rgba(12,16,22,0.80);
+  --blue:#4a7fa8;--blue-dim:rgba(74,127,168,0.12);--blue-border:rgba(74,127,168,0.22);
+  --amber:#c8923a;--amber-dim:rgba(200,146,58,0.12);
+  --green:#4a7c3f;--sprout:#7ab648;
+  --cream:#f0eee8;--muted:rgba(240,238,232,0.5);
+  --border:rgba(240,238,232,0.09);
+}
+html,body{min-height:100vh;font-family:'Inter',sans-serif;background:var(--bg);color:var(--cream);overflow-x:hidden}
+
+.bg{position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 50% 50% at 5% 10%,rgba(74,127,168,.14) 0%,transparent 65%),
+    radial-gradient(ellipse 40% 50% at 95% 90%,rgba(200,146,58,.10) 0%,transparent 60%),
+    radial-gradient(ellipse 55% 35% at 50% 100%,rgba(10,8,5,.9) 0%,transparent 70%),
+    linear-gradient(160deg,#060810 0%,#080a0d 60%,#0a0808 100%)}
+.grid-ol{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(74,127,168,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(74,127,168,.015) 1px,transparent 1px);
+  background-size:65px 65px}
+.soil-strip{position:fixed;bottom:0;left:0;right:0;height:3px;z-index:50;
+  background:linear-gradient(90deg,#0a1520,#1a3a5c,#4a7fa8,#1a3a5c,#0a1520);
+  background-size:200%;animation:soilFlow 10s linear infinite}
+@keyframes soilFlow{to{background-position:200% 0}}
+
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;padding:.9rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:rgba(6,8,12,.88);backdrop-filter:blur(20px)}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:700;
+  color:var(--amber);text-decoration:none;letter-spacing:1px}
+.page-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;color:var(--muted);text-transform:uppercase}
+.back{font-family:'DM Mono',monospace;font-size:11px;color:var(--amber);text-decoration:none;
+  border:1px solid rgba(200,146,58,.25);padding:5px 14px;border-radius:20px;transition:all .2s}
+.back:hover{background:var(--amber-dim)}
+
+main{position:relative;z-index:10;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;
+  padding:6rem 1.5rem 5rem;gap:2rem}
+
+.eyebrow{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:5px;
+  color:var(--amber);text-transform:uppercase;text-align:center;margin-bottom:.8rem;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  opacity:0;animation:up .6s .1s ease forwards}
+.eyebrow::before,.eyebrow::after{content:'';width:35px;height:1px;background:var(--amber);opacity:.35}
+h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,6vw,3.8rem);
+  font-weight:700;line-height:1;text-align:center;color:var(--cream);
+  opacity:0;animation:up .7s .2s ease forwards}
+h1 em{color:var(--amber);font-style:italic}
+.sub{font-size:15px;font-weight:300;color:var(--muted);text-align:center;max-width:480px;line-height:1.7;
+  opacity:0;animation:up .7s .3s ease forwards}
+
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;
+  width:100%;max-width:1060px;opacity:0;animation:up .8s .4s ease forwards}
+
+.panel{background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:1.8rem;backdrop-filter:blur(16px)}
+.panel-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;
+  color:var(--amber);text-transform:uppercase;margin-bottom:1.4rem;
+  display:flex;align-items:center;gap:8px}
+.panel-title::after{content:'';flex:1;height:1px;background:linear-gradient(to right,rgba(200,146,58,.3),transparent)}
+
+.sel-group{margin-bottom:1rem}
+.sel-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:.6rem}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;margin-bottom:1rem}
+.form-row .sel-group{margin-bottom:0}
+
+input[type="radio"]{display:none}
+.opt{display:inline-flex;align-items:center;gap:6px;
+  background:rgba(6,8,12,.8);border:1px solid var(--border);
+  border-radius:8px;padding:7px 13px;font-size:13px;color:var(--muted);
+  cursor:pointer;transition:all .2s;user-select:none}
+.opt:hover{border-color:rgba(200,146,58,.35);color:var(--cream)}
+input[type="radio"]:checked + .opt{
+  border-color:var(--amber);color:var(--cream);
+  background:var(--amber-dim);box-shadow:0 0 0 1px rgba(200,146,58,.15)}
+input[type="radio"]:checked + .opt::after{content:'✓';color:var(--amber);font-size:10px;margin-left:2px}
+.oi{font-size:13px}
+
+.area-input-wrap{position:relative}
+.area-input{width:100%;padding:11px 50px 11px 14px;
+  background:rgba(6,8,12,.8);border:1px solid var(--border);
+  border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;
+  color:var(--cream);outline:none;transition:border .2s;
+  -moz-appearance:textfield;appearance:textfield}
+.area-input::-webkit-outer-spin-button,.area-input::-webkit-inner-spin-button{-webkit-appearance:none;appearance:none}
+.area-input::placeholder{color:rgba(240,238,232,.2)}
+.area-input:focus{border-color:var(--amber);background:rgba(10,12,18,.9)}
+.area-unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px}
+
+.submit-btn{width:100%;padding:.95rem;border-radius:12px;margin-top:.4rem;
+  background:linear-gradient(135deg,#8a6020,#6a4818);
+  border:1px solid rgba(200,146,58,.3);
+  font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-weight:700;
+  color:var(--cream);cursor:pointer;transition:all .25s;letter-spacing:.5px}
+.submit-btn:hover{background:linear-gradient(135deg,#a87030,#8a5820);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.submit-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+/* RESULT PANEL */
+.result-panel{background:var(--surface);border:1px solid rgba(200,146,58,.2);
+  border-radius:20px;padding:1.8rem;backdrop-filter:blur(16px);
+  display:flex;flex-direction:column;gap:1.2rem;position:relative;overflow:hidden}
+.result-panel::before{content:'';position:absolute;top:-40px;right:-40px;
+  width:180px;height:180px;border-radius:50%;
+  background:radial-gradient(circle,rgba(200,146,58,.07) 0%,transparent 70%);pointer-events:none}
+
+.result-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--amber);text-transform:uppercase}
+
+/* PROFIT NUMBER */
+.profit-wrap{text-align:center;padding:.6rem 0}
+.profit-num{font-family:'Cormorant Garamond',serif;
+  font-size:clamp(2.8rem,8vw,4.5rem);font-weight:700;line-height:1;color:var(--cream)}
+.profit-num em{color:var(--sprout);font-style:normal;font-size:.55em;vertical-align:super}
+.profit-unit{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;color:var(--muted);margin-top:.4rem}
+.profit-sub{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;
+  color:var(--amber);margin-top:.3rem}
+
+/* COST BREAKDOWN */
+.cost-section{display:flex;flex-direction:column;gap:.5rem}
+.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.cost-title{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:3px;
+  color:var(--muted);text-transform:uppercase;margin-bottom:.2rem}
+.cost-row{display:flex;justify-content:space-between;align-items:center;
+  padding:.6rem .9rem;background:rgba(6,8,12,.6);border:1px solid var(--border);border-radius:9px}
+.cost-name{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.cost-icon{font-size:13px}
+.cost-val{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;color:var(--cream)}
+
+/* TOTAL ROW */
+.total-row{display:flex;justify-content:space-between;align-items:center;
+  padding:.8rem .9rem;background:rgba(122,182,72,.08);
+  border:1px solid rgba(122,182,72,.2);border-radius:9px;margin-top:.3rem}
+.total-name{font-size:13px;font-weight:500;color:var(--cream)}
+.total-val{font-family:'Cormorant Garamond',serif;font-size:1.2rem;font-weight:700;color:var(--sprout)}
+
+/* Revenue row */
+.rev-row{display:flex;justify-content:space-between;align-items:center;
+  padding:.7rem .9rem;background:rgba(200,146,58,.06);
+  border:1px solid rgba(200,146,58,.15);border-radius:9px}
+.rev-name{font-size:12px;color:var(--amber)}
+.rev-val{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:700;color:var(--amber)}
+
+/* Margin bar */
+.margin-wrap{margin-top:.4rem}
+.margin-label{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:.4rem}
+.margin-track{height:6px;background:rgba(240,238,232,.08);border-radius:3px;overflow:hidden}
+.margin-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--sprout));width:0%;transition:width 1s .3s ease}
+
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;text-align:center;padding:2rem;gap:.8rem;min-height:200px}
+.placeholder-icon{font-size:52px;opacity:.2}
+.placeholder-txt{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted)}
+
+.loading{display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:.8rem;min-height:200px}
+.loading.show{display:flex}
+.dots{display:flex;gap:7px}
+.dots span{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:bounce .8s ease-in-out infinite}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+.loading-txt{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:var(--muted)}
+
+.reset-btn{background:transparent;border:1px solid var(--border);border-radius:10px;
+  padding:.7rem;font-family:'Inter',sans-serif;font-size:13px;color:var(--muted);
+  cursor:pointer;transition:all .2s;width:100%}
+.reset-btn:hover{border-color:var(--amber);color:var(--cream)}
+
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.next-page-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:.85rem 2.5rem;border-radius:12px;border:1px solid rgba(200,146,58,.35);background:var(--amber-dim);font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:700;color:var(--cream);text-decoration:none;letter-spacing:.5px;transition:all .25s}
+.next-page-btn:hover{background:rgba(200,146,58,.22);border-color:var(--amber);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+@media(max-width:680px){.layout{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}.cost-grid{grid-template-columns:1fr}.page-tag{display:none}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="grid-ol"></div>
+<div class="soil-strip"></div>
+
+<div class="topbar">
+  <a href="../Page One/AgriAdvisor-index.html" class="logo">AgriAdvisor</a>
+  <div class="page-tag">03 · Profit Predictor</div>
+  <a href="../Page One/AgriAdvisor-index.html" class="back">← Home</a>
+</div>
+
+<main>
+  <div>
+    <div class="eyebrow">Model 03</div>
+    <h1>Profit <em>Predictor</em></h1>
+    <p class="sub" style="margin-top:.6rem">Enter your crop details and get a complete profit breakdown in Egyptian Pounds.</p>
+  </div>
+
+  <div class="layout">
+
+    <!-- FORM -->
+    <div class="panel">
+      <div class="panel-title">Crop Details</div>
+
+      <!-- Crop -->
+      <div class="sel-group">
+        <div class="sel-label">Crop</div>
+        <div class="opts">
+          <input type="radio" name="crop" id="c-wheat"><label for="c-wheat" class="opt"><span class="oi">🌾</span> Wheat</label>
+          <input type="radio" name="crop" id="c-rice"><label for="c-rice" class="opt"><span class="oi">🍚</span> Rice</label>
+          <input type="radio" name="crop" id="c-maize"><label for="c-maize" class="opt"><span class="oi">🌽</span> Maize</label>
+          <input type="radio" name="crop" id="c-cotton"><label for="c-cotton" class="opt"><span class="oi">🌸</span> Cotton</label>
+          <input type="radio" name="crop" id="c-sugarcane"><label for="c-sugarcane" class="opt"><span class="oi">🎋</span> Sugarcane</label>
+          <input type="radio" name="crop" id="c-tomato"><label for="c-tomato" class="opt"><span class="oi">🍅</span> Tomato</label>
+          <input type="radio" name="crop" id="c-potato"><label for="c-potato" class="opt"><span class="oi">🥔</span> Potato</label>
+          <input type="radio" name="crop" id="c-fava"><label for="c-fava" class="opt"><span class="oi">🫘</span> Fava Beans</label>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <!-- Season -->
+        <div class="sel-group">
+          <div class="sel-label">Season</div>
+          <div class="opts">
+            <input type="radio" name="season" id="se-winter"><label for="se-winter" class="opt"><span class="oi">❄️</span> Winter</label>
+            <input type="radio" name="season" id="se-summer"><label for="se-summer" class="opt"><span class="oi">🌞</span> Summer</label>
+            <input type="radio" name="season" id="se-nile"><label for="se-nile" class="opt"><span class="oi">💧</span> Nile</label>
+          </div>
+        </div>
+        <!-- Soil -->
+        <div class="sel-group">
+          <div class="sel-label">Soil Type</div>
+          <div class="opts">
+            <input type="radio" name="soil" id="s-clay"><label for="s-clay" class="opt"><span class="oi">🏔️</span> Clay</label>
+            <input type="radio" name="soil" id="s-loamy"><label for="s-loamy" class="opt"><span class="oi">🌍</span> Loamy</label>
+            <input type="radio" name="soil" id="s-cal"><label for="s-cal" class="opt"><span class="oi">⬜</span> Calcareous</label>
+            <input type="radio" name="soil" id="s-sandy"><label for="s-sandy" class="opt"><span class="oi">🏜️</span> Sandy</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Area -->
+      <div class="sel-group">
+        <div class="sel-label">Area Planted</div>
+        <div class="area-input-wrap">
+          <input type="number" class="area-input" id="area-input"
+            placeholder="e.g. 5" min="0.5" max="500" step="0.5">
+          <span class="area-unit">Feddan</span>
+        </div>
+      </div>
+
+      <button class="submit-btn" id="submit-btn" onclick="calculate()" disabled>
+        Predict Profit →
+      </button>
+    </div>
+
+    <!-- RESULT -->
+    <div class="panel result-panel" id="result-panel">
+
+      <div class="placeholder" id="placeholder">
+        <div class="placeholder-icon">💰</div>
+        <div class="placeholder-txt">Fill in the details<br>to see your profit estimate</div>
+      </div>
+
+      <div class="loading" id="loading">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="loading-txt">Calculating profit...</div>
+      </div>
+
+      <div id="error-display" style="display:none;flex-direction:column;align-items:center;justify-content:center;flex:1;text-align:center;padding:2rem;gap:.9rem;min-height:320px">
+        <div style="font-size:42px;opacity:.5">⚠️</div>
+        <div id="error-msg" style="font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;color:rgba(200,146,58,0.85);max-width:290px;line-height:1.9"></div>
+        <button class="reset-btn" style="max-width:180px;margin-top:.4rem" onclick="resetForm()">↩ Try Again</button>
+      </div>
+
+      <div id="result-content" style="display:none;flex-direction:column;gap:.8rem">
+
+        <div class="result-label" id="res-combo">—</div>
+
+        <!-- Net profit big number -->
+        <div class="profit-wrap">
+          <div class="profit-num"><em>EGP </em><span id="res-profit">—</span></div>
+          <div class="profit-unit">NET PROFIT</div>
+          <div class="profit-sub" id="res-per-fed">— EGP per feddan</div>
+        </div>
+
+        <!-- Revenue -->
+        <div class="cost-section">
+          <div class="rev-row">
+            <span class="rev-name">📈 Gross Revenue</span>
+            <span class="rev-val" id="res-revenue">—</span>
+          </div>
+
+          <div class="cost-title" style="margin-top:.4rem">Cost Breakdown</div>
+          <div class="cost-grid">
+            <div class="cost-row"><span class="cost-name"><span class="cost-icon">🌱</span> Seeds</span><span class="cost-val" id="c-seed">—</span></div>
+            <div class="cost-row"><span class="cost-name"><span class="cost-icon">🧪</span> Fertilizer</span><span class="cost-val" id="c-fert">—</span></div>
+            <div class="cost-row"><span class="cost-name"><span class="cost-icon">💧</span> Irrigation</span><span class="cost-val" id="c-irr">—</span></div>
+            <div class="cost-row"><span class="cost-name"><span class="cost-icon">👷</span> Labor</span><span class="cost-val" id="c-lab">—</span></div>
+            <div class="cost-row"><span class="cost-name"><span class="cost-icon">🧴</span> Pesticides</span><span class="cost-val" id="c-pest">—</span></div>
+          </div>
+          <div class="total-row">
+            <span class="total-name">Total Cost</span>
+            <span class="total-val" id="res-cost">—</span>
+          </div>
+        </div>
+
+        <!-- Margin bar -->
+        <div class="margin-wrap">
+          <div class="margin-label">Profit margin</div>
+          <div class="margin-track"><div class="margin-fill" id="res-bar"></div></div>
+        </div>
+
+        <button class="reset-btn" onclick="resetForm()">↩ New Calculation</button>
+      </div>
+    </div>
+  </div>
+  <a href="../Page Five/AgriAdvisor-page5-guide.html" class="next-page-btn">Next Page: Crop Guide →</a>
+</main>
+
+<script>
+const API = "http://localhost:8000/profit/predict";
+
+const CROP_MAP   = {"c-wheat":"Wheat","c-rice":"Rice","c-maize":"Maize","c-cotton":"Cotton","c-sugarcane":"Sugarcane","c-tomato":"Tomato","c-potato":"Potato","c-fava":"Fava Beans"};
+const SEASON_MAP = {"se-winter":"Winter","se-summer":"Summer","se-nile":"Nile"};
+const SOIL_MAP   = {"s-clay":"Clay","s-loamy":"Loamy","s-cal":"Calcareous","s-sandy":"Sandy"};
+
+function getSelected(name, map) {
+  for (const [id,val] of Object.entries(map)) {
+    if (document.getElementById(id)?.checked) return val;
+  }
+  return null;
+}
+
+function checkReady() {
+  const crop   = getSelected('crop', CROP_MAP);
+  const season = getSelected('season', SEASON_MAP);
+  const soil   = getSelected('soil', SOIL_MAP);
+  const area   = parseFloat(document.getElementById('area-input').value);
+  document.getElementById('submit-btn').disabled = !(crop && season && soil && area > 0);
+}
+
+document.querySelectorAll('input[type="radio"]').forEach(r => r.addEventListener('change', checkReady));
+document.getElementById('area-input').addEventListener('input', checkReady);
+
+function fmt(n) { return Math.round(n).toLocaleString('en-EG'); }
+
+function showError(message) {
+  document.getElementById('loading').classList.remove('show');
+  document.getElementById('placeholder').style.display   = 'none';
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('error-msg').textContent = message;
+  document.getElementById('error-display').style.display = 'flex';
+}
+
+async function calculate() {
+  const crop   = getSelected('crop', CROP_MAP);
+  const season = getSelected('season', SEASON_MAP);
+  const soil   = getSelected('soil', SOIL_MAP);
+  const area   = parseFloat(document.getElementById('area-input').value);
+
+  document.getElementById('placeholder').style.display   = 'none';
+  document.getElementById('result-content').style.display= 'none';
+  document.getElementById('loading').classList.add('show');
+
+  try {
+    const res = await fetch(API, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({crop, season, soil, area_feddans: area})
+    });
+    const d = await res.json();
+
+    if (!res.ok) {
+      showError(d.message || d.error || "Invalid crop/season combination");
+      return;
+    }
+    showResult(d, crop, season, soil, area);
+  } catch (err) {
+    console.log(err);
+    showError("Could not connect to the server. Make sure the backend is running on port 5002.");
+  }
+
+}
+
+function showResult(d, crop, season, soil, area) {
+  document.getElementById('loading').classList.remove('show');
+
+  document.getElementById('res-combo').textContent    = `${crop} · ${soil} · ${season}`;
+  document.getElementById('res-profit').textContent   = fmt(d.net_profit);
+  document.getElementById('res-per-fed').textContent  = `${fmt(d.profit_per_feddan)} EGP per feddan`;
+  document.getElementById('res-revenue').textContent  = `${fmt(d.gross_revenue)} EGP`;
+  document.getElementById('c-seed').textContent       = `${fmt(d.seed_cost)} EGP`;
+  document.getElementById('c-fert').textContent       = `${fmt(d.fertilizer_cost)} EGP`;
+  document.getElementById('c-irr').textContent        = `${fmt(d.irrigation_cost)} EGP`;
+  document.getElementById('c-lab').textContent        = `${fmt(d.labor_cost)} EGP`;
+  document.getElementById('c-pest').textContent       = `${fmt(d.pesticide_cost)} EGP`;
+  document.getElementById('res-cost').textContent     = `${fmt(d.total_cost)} EGP`;
+
+  const margin = Math.min(Math.round((d.net_profit / d.gross_revenue) * 100), 100);
+  document.getElementById('result-content').style.display = 'flex';
+  setTimeout(() => { document.getElementById('res-bar').style.width = Math.max(margin,5) + '%'; }, 100);
+}
+
+function resetForm() {
+  document.querySelectorAll('input[type="radio"]').forEach(r => r.checked = false);
+  document.getElementById('area-input').value = '';
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('error-display').style.display  = 'none';
+  document.getElementById('placeholder').style.display    = 'flex';
+  document.getElementById('res-bar').style.width = '0%';
+}
+</script>
+</body>
+</html>
