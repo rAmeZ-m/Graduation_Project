@@ -198,6 +198,26 @@ All endpoints return `400` for invalid crop–season or crop–soil combinations
 
 ---
 
+## Screenshots
+
+### Landing Page
+<!-- Homepage image (Page One) -->
+![Landing Page](assets/screenshot-landing.png)
+
+### Crop Recommender
+<!-- Image of the crop recommendation result (Page Two) -->
+![Crop Recommender](assets/screenshot-crop.png)
+
+### Yield Estimator
+<!-- Image of the productivity estimation result (Page Three) -->
+![Yield Estimator](assets/screenshot-yield.png)
+
+### Profit Calculator
+<!-- Image of the profit calculation result (Page Four) -->
+![Profit Calculator](assets/screenshot-profit.png)
+
+---
+
 ## .gitignore Recommendations
 
 ```
